@@ -1,0 +1,29 @@
+# Convenience for building/running both MCP servers together.
+# Both talk MCP over stdio, so `docker compose run` (not `up`) is the normal
+# way to use them — each is meant to be launched per-client-connection, the
+# way an MCP client (a chat application, an agent framework, etc.) would
+# spawn it.
+#
+#   git submodule update --init --recursive
+#   docker compose build
+#   docker compose run --rm document-qa
+#   docker compose run --rm clauseguard
+services:
+  document-qa:
+    build:
+      context: .
+      dockerfile: docker/document-qa.Dockerfile
+    stdin_open: true
+    tty: false
+
+  clauseguard:
+    build:
+      context: .
+      dockerfile: docker/clauseguard.Dockerfile
+    stdin_open: true
+    tty: false
+    volumes:
+      - clauseguard-data:/app/data
+
+volumes:
+  clauseguard-data:

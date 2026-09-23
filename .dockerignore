@@ -1,0 +1,9 @@
+**/__pycache__
+**/*.pyc
+.git
+.github
+.pytest_cache
+data/
+tests/
+vendor/*/.git
+vendor/document-qa/.streamlit
