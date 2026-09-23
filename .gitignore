@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# Poetry
+poetry.lock.bak
+
+# Data / runtime artifacts (regenerated, not source)
+/data/
+*.db
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Docker
+*.log

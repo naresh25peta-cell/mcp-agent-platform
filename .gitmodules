@@ -1,0 +1,6 @@
+[submodule "vendor/document-qa"]
+	path = vendor/document-qa
+	url = https://github.com/naresh25peta-cell/document-qa.git
+[submodule "vendor/clauseguard"]
+	path = vendor/clauseguard
+	url = https://github.com/naresh25peta-cell/clauseguard.git
