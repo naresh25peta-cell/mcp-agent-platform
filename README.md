@@ -3,8 +3,8 @@
 An MCP-native platform that wraps two existing projects — [document-qa](https://github.com/naresh25peta-cell/document-qa)
 (hybrid RAG retrieval) and [clauseguard](https://github.com/naresh25peta-cell/clauseguard)
 (contract clause/risk assistant) — as [Model Context Protocol](https://modelcontextprotocol.io)
-tool servers, and demonstrates acting as an MCP *client* against a
-third-party server too.
+tool servers, adds a LangGraph agent that routes between them automatically,
+and demonstrates acting as an MCP *client* against a third-party server too.
 
 ## Phase 1 scope (this repo, as it stands)
 
@@ -48,6 +48,35 @@ Connects to the official `@modelcontextprotocol/server-filesystem` reference
 server (launched on demand via `npx`) and calls its `write_file`,
 `list_directory`, and `read_text_file` tools against a sandboxed temp
 directory. Chosen specifically because it needs no API key or account.
+
+## Phase 2 scope (added on top of Phase 1)
+
+- **A LangGraph/LangChain supervisor agent** (`src/mcp_agent_platform/supervisor/`)
+  that reads a natural-language question, decides which Phase 1 MCP tool can
+  answer it (`search_documents` vs `list_nomination_rules`), calls it, and
+  answers using only what the tool returned.
+- The supervisor's routing/reasoning LLM is **Groq's free tier** — the one
+  piece of this repo that isn't literally zero-dependency, but is still $0:
+  no card required, free API key. Nothing else changed cost-wise; the tools
+  it drives are the exact same free Phase 1 servers, launched as
+  subprocesses over the real MCP protocol (not imported as plain Python
+  functions).
+- A hand-rolled MCP→LangChain tool adapter (`supervisor/mcp_tools.py`)
+  instead of the `langchain-mcp-adapters` package — that package's current
+  release doesn't yet support mcp 2.x (it imports a name that was renamed
+  in the same stateless-architecture rewrite that renamed `FastMCP` to
+  `MCPServer` back in Phase 1), so it can't be installed alongside servers
+  that already target mcp 2.x. The adapter talks to `mcp.Client` directly.
+
+### Running the supervisor
+
+```bash
+cp .env.example .env
+# put your free Groq key (https://console.groq.com) in .env
+
+poetry run python -m mcp_agent_platform.supervisor.cli "How many days of annual leave do I get?"
+poetry run python -m mcp_agent_platform.supervisor.cli "List nomination rules for AGR-001"
+```
 
 ## Setup
 
@@ -118,10 +147,21 @@ The filesystem client demo test (`tests/test_filesystem_demo.py`) *does* run
 against the real official filesystem MCP server via `npx`, and is skipped
 automatically if Node.js isn't available.
 
+The supervisor tests (`tests/test_supervisor.py`) spin up the **real**
+Phase 1 MCP servers as subprocesses and call their **real** tools over the
+real MCP protocol — only the routing LLM is a small deterministic fake, so
+these run with no `GROQ_API_KEY` and no network. `tests/test_supervisor_live.py`
+runs the same questions against the real Groq model instead; it's skipped
+automatically unless `GROQ_API_KEY` is set, so it never blocks CI or a
+fresh clone — run it locally once you have a key.
+
 ## Roadmap
 
-Phase 1 (this repo) is the foundation: two MCP servers, one MCP client, CI,
-Docker. Later phases (not yet built) extend this into a full multi-agent
-platform: a LangGraph supervisor orchestrating these tools, guardrails,
-CI-gated evals (Ragas/DeepEval), and observability (OpenTelemetry GenAI
-conventions / Langfuse).
+- **Phase 1 (done):** two MCP servers, one MCP client, CI, Docker.
+- **Phase 2 (done):** a LangGraph supervisor that routes between the two
+  MCP servers using a free-tier LLM.
+- **Phase 3 (not started):** guardrails on the supervisor's inputs/outputs.
+- **Phase 4 (not started):** CI-gated evals (Ragas/DeepEval) scoring
+  retrieval and answer quality, so a regression fails the build.
+- **Phase 5 (not started):** observability (OpenTelemetry GenAI conventions
+  / Langfuse) so a run's tool calls and reasoning are traceable.
