@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "mcp-agent-platform"
-version = "0.1.0"
-description = "MCP-native platform: existing document-qa and clauseguard projects exposed as Model Context Protocol tool servers, plus a filesystem MCP client demo. All tools in Phase 1 run fully local/free (no paid API keys required)."
+version = "0.2.0"
+description = "MCP-native platform: existing document-qa and clauseguard projects exposed as Model Context Protocol tool servers, a LangGraph supervisor agent that routes between them, and a filesystem MCP client demo. Phase 1 tools run fully local/free; the Phase 2 supervisor uses Groq's free tier as its routing LLM (no paid API keys required)."
 authors = ["Naresh Kumar"]
 readme = "README.md"
 packages = [{ include = "mcp_agent_platform", from = "src" }]
@@ -15,6 +15,9 @@ numpy = ">=1.26,<3"
 pymupdf = ">=1.24,<2"
 rank-bm25 = ">=0.2.2,<0.3"
 python-dotenv = "^1.0"
+langgraph = "^1.0"
+langchain = "^1.0"
+langchain-groq = "^1.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2"
