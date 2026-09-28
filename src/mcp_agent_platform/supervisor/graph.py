@@ -39,7 +39,7 @@ def default_model() -> BaseChatModel:
             "(no card required) and put it in a .env file — see .env.example."
         )
     return ChatGroq(
-        model=os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile"),
+        model=os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b"),
         temperature=0,
     )
 

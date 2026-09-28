@@ -29,6 +29,8 @@ async def test_supervisor_answers_a_rules_question_live():
 
     answer = await ask("What nomination rules exist for AgreementGuid AGR-001?")
     assert answer
+    # Models may typeset IDs with Unicode hyphens (e.g. U+2011 "NR‑001").
+    answer = answer.translate({ord(c): "-" for c in "‐‑‒–"})
     assert "NR-001" in answer or "AGR-001" in answer
 
 
