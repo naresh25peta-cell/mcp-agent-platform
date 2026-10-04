@@ -12,47 +12,24 @@ rather than `search_documents` (document-qa), because the former is a
 pure SQLite read with no external dependency, while the latter needs a
 one-time download of the embedding model — exercised for real in
 tests/test_document_qa_server.py with its own mocked-model approach, and
-in test_supervisor_live.py below against the real Groq model.
+in test_supervisor_live.py against the real Groq model.
+
+The fake tool-calling model and fake judge model (for the Phase 3
+guardrails `ask()` now runs through) both live in conftest.py, shared
+with tests/test_guardrails.py.
 """
 from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Any
 
 import pytest
-from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage
-from langchain_core.outputs import ChatGeneration, ChatResult
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from mcp_agent_platform.supervisor.graph import ask, build_supervisor  # noqa: E402
 from mcp_agent_platform.supervisor.mcp_tools import load_all_tools  # noqa: E402
-
-
-class FakeToolCallingModel(BaseChatModel):
-    """Replays a fixed sequence of AIMessages instead of calling a real LLM.
-
-    Implements `bind_tools` as a no-op (returns self) since create_agent
-    calls it during graph construction; the tool schema itself is ignored
-    because this fake's responses are pre-scripted, not generated.
-    """
-
-    responses: list[AIMessage]
-    idx: int = 0
-
-    def _generate(self, messages: list, stop=None, run_manager=None, **kwargs: Any) -> ChatResult:
-        message = self.responses[self.idx]
-        self.idx += 1
-        return ChatResult(generations=[ChatGeneration(message=message)])
-
-    def bind_tools(self, tools, **kwargs: Any):
-        return self
-
-    @property
-    def _llm_type(self) -> str:
-        return "fake-tool-calling"
 
 
 @pytest.mark.asyncio
@@ -63,9 +40,11 @@ async def test_load_all_tools_finds_both_servers_tools():
 
 
 @pytest.mark.asyncio
-async def test_supervisor_routes_question_to_clauseguard_tool():
-    fake_model = FakeToolCallingModel(
-        responses=[
+async def test_supervisor_routes_question_to_clauseguard_tool(make_fake_tool_model):
+    # Talks to build_supervisor()/the LangGraph agent directly — no
+    # guardrail layer involved, since this test is about tool routing.
+    fake_model = make_fake_tool_model(
+        [
             AIMessage(
                 content="",
                 tool_calls=[
@@ -98,9 +77,12 @@ async def test_supervisor_routes_question_to_clauseguard_tool():
 
 
 @pytest.mark.asyncio
-async def test_ask_returns_final_answer_text():
-    fake_model = FakeToolCallingModel(
-        responses=[
+async def test_ask_returns_final_answer_text(make_fake_tool_model, allow_judge):
+    # Goes through ask(), so it also exercises the Phase 3 guardrail layer
+    # — an always-ALLOW fake judge keeps this test about the agent's
+    # answer, not the guardrails (see test_guardrails.py for those).
+    fake_model = make_fake_tool_model(
+        [
             AIMessage(
                 content="",
                 tool_calls=[
@@ -115,5 +97,5 @@ async def test_ask_returns_final_answer_text():
         ]
     )
 
-    answer = await ask("Nomination rules for TG-200?", model=fake_model)
+    answer = await ask("Nomination rules for TG-200?", model=fake_model, judge_model=allow_judge)
     assert answer == "TG-200 has one nomination rule: NR-003."
