@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mcp-agent-platform"
-version = "0.4.0"
+version = "0.5.0"
 description = "MCP-native platform: existing document-qa and clauseguard projects exposed as Model Context Protocol tool servers, a LangGraph supervisor agent that routes between them, and a filesystem MCP client demo. Phase 1 tools run fully local/free; the Phase 2 supervisor uses Groq's free tier as its routing LLM; Phase 3 adds a two-layer (rule-based + LLM judge) guardrail around it. No paid API keys required."
 authors = ["Naresh Kumar"]
 readme = "README.md"
@@ -18,10 +18,12 @@ python-dotenv = "^1.0"
 langgraph = "^1.0"
 langchain = "^1.0"
 langchain-groq = "^1.0"
+opentelemetry-api = "^1.30"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2"
 pytest-asyncio = "^0.24"
+opentelemetry-sdk = "^1.30"
 
 [build-system]
 requires = ["poetry-core"]

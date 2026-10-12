@@ -28,6 +28,7 @@ from mcp_agent_platform.supervisor.guardrails import (
     judge_output,
 )
 from mcp_agent_platform.supervisor.mcp_tools import load_all_tools
+from mcp_agent_platform.tracing import span
 
 SYSTEM_PROMPT = (
     "You are a supervisor agent with two tools available: `search_documents` "
@@ -88,7 +89,21 @@ async def ask(
     model is only ever built (and GROQ_API_KEY only ever required for it)
     if the LLM judge layer is actually enabled — see guardrails.judge_enabled.
     """
-    input_rule_check = check_input_rules(question)
+    with span("ask", **{"gen_ai.operation.name": "invoke_agent", "ask.question_chars": len(question)}) as root:
+        answer = await _ask_traced(question, model, judge_model)
+        root.set_attribute("ask.answer_chars", len(answer))
+        return answer
+
+
+def _record(s, result) -> None:
+    s.set_attribute("guardrail.allowed", result.allowed)
+    s.set_attribute("guardrail.layer", result.layer)
+
+
+async def _ask_traced(question, model, judge_model) -> str:
+    with span("guardrail.input_rules") as s:
+        input_rule_check = check_input_rules(question)
+        _record(s, input_rule_check)
     if not input_rule_check.allowed:
         return f"I can't help with that request: {input_rule_check.reason}."
 
@@ -96,7 +111,9 @@ async def ask(
     if judge is None and judge_enabled():
         judge = default_judge_model()
 
-    input_judge_verdict = await judge_input(question, judge)
+    with span("guardrail.input_judge") as s:
+        input_judge_verdict = await judge_input(question, judge)
+        _record(s, input_judge_verdict)
     if not input_judge_verdict.allowed:
         return f"I can't help with that request: {input_judge_verdict.reason}."
 
@@ -104,11 +121,15 @@ async def ask(
     result = await agent.ainvoke({"messages": [{"role": "user", "content": question}]})
     answer = result["messages"][-1].content
 
-    output_rule_check = check_output_rules(answer)
+    with span("guardrail.output_rules") as s:
+        output_rule_check = check_output_rules(answer)
+        _record(s, output_rule_check)
     if not output_rule_check.allowed:
         return f"I can't share that answer: {output_rule_check.reason}."
 
-    output_judge_verdict = await judge_output(question, answer, judge)
+    with span("guardrail.output_judge") as s:
+        output_judge_verdict = await judge_output(question, answer, judge)
+        _record(s, output_judge_verdict)
     if not output_judge_verdict.allowed:
         return f"I can't share that answer: {output_judge_verdict.reason}."
 

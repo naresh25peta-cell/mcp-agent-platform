@@ -15,10 +15,12 @@ import sys
 from dotenv import load_dotenv
 
 from mcp_agent_platform.supervisor.graph import ask
+from mcp_agent_platform.tracing import setup_tracing
 
 
 def main() -> None:
     load_dotenv()
+    setup_tracing()  # prints spans to stdout when MCP_TRACE=console
     if len(sys.argv) < 2:
         print('Usage: python -m mcp_agent_platform.supervisor.cli "<question>"')
         raise SystemExit(1)

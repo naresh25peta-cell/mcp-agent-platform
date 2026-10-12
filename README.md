@@ -1,5 +1,7 @@
 # mcp-agent-platform
 
+[![tests](https://github.com/naresh25peta-cell/mcp-agent-platform/actions/workflows/tests.yml/badge.svg)](https://github.com/naresh25peta-cell/mcp-agent-platform/actions/workflows/tests.yml)
+
 An MCP-native platform that wraps two existing projects — [document-qa](https://github.com/naresh25peta-cell/document-qa)
 (hybrid RAG retrieval) and [clauseguard](https://github.com/naresh25peta-cell/clauseguard)
 (contract clause/risk assistant) — as [Model Context Protocol](https://modelcontextprotocol.io)
@@ -164,6 +166,29 @@ On the 6 paraphrased questions all three modes score hit@4 = 0.667.
 - Answer-quality evals (Ragas/DeepEval with an LLM judge) are **not built**; they
   need an API key, so they are deferred rather than faked.
 
+## Phase 5 scope (added on top of Phase 4)
+
+OpenTelemetry tracing (`src/mcp_agent_platform/tracing.py`), so one run's
+guardrail checks and MCP tool calls can be seen and timed:
+
+| Span | What it covers |
+|---|---|
+| `ask` | one question, end to end (parent of the rest) |
+| `guardrail.input_rules` / `input_judge` / `output_rules` / `output_judge` | each guardrail layer, with `guardrail.allowed` and `guardrail.layer` |
+| `execute_tool <name>` | each MCP tool call, with `gen_ai.tool.name` and the server module |
+
+Attribute names follow the OpenTelemetry GenAI conventions where one exists.
+
+- **Privacy by design:** spans hold names and lengths only, never the question,
+  the answer, tool arguments or tool results. A test asserts this.
+- **Off by default and free:** without an SDK provider every span is a no-op.
+  `MCP_TRACE=console` prints spans to stdout when using the CLI; pass any
+  OpenTelemetry exporter to `setup_tracing()` to send them elsewhere
+  (OTLP, Langfuse's OTel endpoint, and so on).
+- **Not done yet:** the LLM calls themselves (token counts and per-request
+  latency) need a LangChain callback handler. Dashboards and a hosted
+  backend are also out of scope.
+
 ## Setup
 
 ```bash
@@ -260,5 +285,5 @@ the judge via `GUARDRAILS_LLM_JUDGE=0` means it's never built either.
   the supervisor's inputs and outputs.
 - **Phase 4 (retrieval half done):** CI-gated retrieval evals (hit@k / MRR) are in.
   Answer-quality evals (Ragas/DeepEval) and real-model thresholds are not yet.
-- **Phase 5 (not started):** observability (OpenTelemetry GenAI conventions
-  / Langfuse) so a run's tool calls and reasoning are traceable.
+- **Phase 5 (tracing half done):** OpenTelemetry spans for guardrails and
+  tool calls are in. LLM-call tracing (tokens, latency) and a trace backend are not yet.

@@ -27,6 +27,8 @@ from typing import Any
 from langchain_core.tools import BaseTool, StructuredTool
 from mcp import Client, StdioServerParameters
 
+from mcp_agent_platform.tracing import span
+
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _SRC_DIR = _REPO_ROOT / "src"
 
@@ -59,8 +61,12 @@ def _make_langchain_tool(
     module: str, tool_name: str, description: str | None, input_schema: dict
 ) -> StructuredTool:
     async def _call(**kwargs: Any) -> Any:
-        async with Client(_server_params(module)) as client:
-            result = await client.call_tool(tool_name, kwargs)
+        with span(
+            f"execute_tool {tool_name}",
+            **{"gen_ai.operation.name": "execute_tool", "gen_ai.tool.name": tool_name, "mcp.server": module},
+        ):
+            async with Client(_server_params(module)) as client:
+                result = await client.call_tool(tool_name, kwargs)
         if result.structured_content is not None:
             content = result.structured_content
             return content.get("result", content) if isinstance(content, dict) else content
