@@ -1,0 +1,10 @@
+{
+  "embedder": "hashing",
+  "k": 4,
+  "note": "Regression floors for the deterministic offline run (hashing embedder). Each floor is the first measured value minus 0.05 (about one question's worth of slack), recorded 2026-10-12 over the 25-question gold set. Raise them when retrieval genuinely improves; lowering them should be a conscious, reviewed decision. These do not describe real-embedding-model quality.",
+  "min": {
+    "keyword":  {"overall": {"hit": 0.87, "mrr": 0.76}, "lexical": {"hit": 0.95, "mrr": 0.88}},
+    "semantic": {"overall": {"hit": 0.71, "mrr": 0.52}},
+    "hybrid":   {"overall": {"hit": 0.87, "mrr": 0.70}, "lexical": {"hit": 0.95, "mrr": 0.79}}
+  }
+}

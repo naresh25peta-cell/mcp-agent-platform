@@ -1,0 +1,31 @@
+{
+  "document": "sample_handbook.txt",
+  "note": "Small synthetic gold set over the fictional Northstar Labs handbook. A question counts as a hit when a retrieved chunk contains `expected` (case-insensitive). 'lexical' questions reuse the handbook's own wording; 'paraphrase' questions deliberately avoid it. This measures retrieval only, not answer quality.",
+  "questions": [
+    {"q": "How many days of paid annual leave do full-time employees get?", "expected": "25 days", "category": "lexical"},
+    {"q": "Where must leave requests be submitted?", "expected": "People Portal", "category": "lexical"},
+    {"q": "How far in advance must leave requests be submitted?", "expected": "ten working days", "category": "lexical"},
+    {"q": "Who approves leave requests?", "expected": "line manager approves", "category": "lexical"},
+    {"q": "How many unused days can carry over into the next year?", "expected": "five unused days", "category": "lexical"},
+    {"q": "By what date must carried-over days be used?", "expected": "31 March", "category": "lexical"},
+    {"q": "How many days per week may employees work remotely?", "expected": "three days per week", "category": "lexical"},
+    {"q": "What are the core collaboration hours?", "expected": "10:00 to 15:00", "category": "lexical"},
+    {"q": "What approval is needed for working abroad?", "expected": "written approval", "category": "lexical"},
+    {"q": "What is the annual learning budget?", "expected": "GBP 800", "category": "lexical"},
+    {"q": "What does the learning budget cover?", "expected": "professional certifications", "category": "lexical"},
+    {"q": "Does unused learning budget carry forward?", "expected": "does not carry forward", "category": "lexical"},
+    {"q": "What equipment does the company provide?", "expected": "laptop and a headset", "category": "lexical"},
+    {"q": "Within how long must lost equipment be reported to the IT helpdesk?", "expected": "two hours", "category": "lexical"},
+    {"q": "Must employees enable multi-factor authentication?", "expected": "multi-factor authentication", "category": "lexical"},
+    {"q": "What must expense claims include?", "expected": "itemised receipt", "category": "lexical"},
+    {"q": "Within how many days must expense claims be submitted?", "expected": "30 days", "category": "lexical"},
+    {"q": "What is the meal allowance for approved business travel?", "expected": "GBP 35", "category": "lexical"},
+    {"q": "Is alcohol reimbursable?", "expected": "Alcohol is not reimbursable", "category": "lexical"},
+    {"q": "How many paid holiday days do staff get each year?", "expected": "25 days", "category": "paraphrase"},
+    {"q": "Where do I ask for time off?", "expected": "People Portal", "category": "paraphrase"},
+    {"q": "How many days can I work from home?", "expected": "three days per week", "category": "paraphrase"},
+    {"q": "How much can I spend on training courses?", "expected": "GBP 800", "category": "paraphrase"},
+    {"q": "Who do I tell if I lose my laptop?", "expected": "IT helpdesk", "category": "paraphrase"},
+    {"q": "When do I get my money back for a claim?", "expected": "next monthly payroll", "category": "paraphrase"}
+  ]
+}
