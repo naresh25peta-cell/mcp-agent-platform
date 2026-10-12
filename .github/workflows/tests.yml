@@ -25,6 +25,17 @@ jobs:
         run: poetry install --with dev
       - name: Run tests
         run: poetry run pytest -v
+      - name: Retrieval eval gate (Phase 4)
+        # Deterministic, offline: fails the build if hit@k / MRR drop below
+        # the minimums recorded in src/mcp_agent_platform/evals/thresholds.json
+        run: poetry run python -m mcp_agent_platform.evals.retrieval_eval --check --report eval-report.json
+      - name: Upload eval report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: retrieval-eval-report
+          path: eval-report.json
+          if-no-files-found: ignore
 
   docker-build:
     runs-on: ubuntu-latest
