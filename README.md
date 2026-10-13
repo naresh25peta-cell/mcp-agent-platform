@@ -9,9 +9,21 @@ tool servers, adds a LangGraph agent that routes between them automatically,
 wraps that agent in a two-layer guardrail, and demonstrates acting as an MCP
 *client* against a third-party server too.
 
-## Phase 1 scope (this repo, as it stands)
+## Overview
 
-This is Phase 1 of a larger roadmap. It deliberately covers just:
+- **MCP servers + client demo** — `document-qa` and `clauseguard` wrapped as
+  Model Context Protocol tool servers, plus a demo client against a
+  third-party MCP server.
+- **LangGraph supervisor** — an agent that routes between the two tool
+  servers automatically.
+- **Two-layer guardrails** — rule-based + LLM-judge checks wrapping every
+  request, on the way in and the way out.
+- **CI-gated retrieval evals** — hit@k/MRR scoring of `document-qa` retrieval
+  that fails the build on regression.
+- **OpenTelemetry tracing** — GenAI-convention spans for questions, guardrail
+  checks, and MCP tool calls, off by default.
+
+## Phase 1 scope
 
 - **Two MCP servers**, each wrapping one existing project's *free, local-only*
   functionality — no code in either source project was modified; both are
