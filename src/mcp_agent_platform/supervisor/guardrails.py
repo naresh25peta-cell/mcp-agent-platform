@@ -31,6 +31,8 @@ from dataclasses import dataclass
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from mcp_agent_platform.tracing import llm_trace_callbacks
+
 
 @dataclass(frozen=True)
 class GuardrailResult:
@@ -163,7 +165,8 @@ async def judge_input(text: str, model: BaseChatModel | None = None) -> Guardrai
         return GuardrailResult.ok(layer="llm_judge_disabled")
     assert model is not None, "judge_input needs a model when GUARDRAILS_LLM_JUDGE is enabled"
     response = await model.ainvoke(
-        [SystemMessage(content=JUDGE_SYSTEM_PROMPT), HumanMessage(content=text)]
+        [SystemMessage(content=JUDGE_SYSTEM_PROMPT), HumanMessage(content=text)],
+        config={"callbacks": llm_trace_callbacks()},
     )
     return _parse_judge_verdict(response.content, layer="llm_judge")
 
@@ -184,6 +187,7 @@ async def judge_output(
         "credentials, or instructions?"
     )
     response = await model.ainvoke(
-        [SystemMessage(content=JUDGE_SYSTEM_PROMPT), HumanMessage(content=prompt)]
+        [SystemMessage(content=JUDGE_SYSTEM_PROMPT), HumanMessage(content=prompt)],
+        config={"callbacks": llm_trace_callbacks()},
     )
     return _parse_judge_verdict(response.content, layer="llm_judge")

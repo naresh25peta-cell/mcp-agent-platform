@@ -211,9 +211,13 @@ Attribute names follow the OpenTelemetry GenAI conventions where one exists.
   `MCP_TRACE=console` prints spans to stdout when using the CLI; pass any
   OpenTelemetry exporter to `setup_tracing()` to send them elsewhere
   (OTLP, Langfuse's OTel endpoint, and so on).
-- **Not done yet:** the LLM calls themselves (token counts and per-request
-  latency) need a LangChain callback handler. Dashboards and a hosted
-  backend are also out of scope.
+- **LLM calls are traced too:** a LangChain callback adds one `chat <model>`
+  span per request (supervisor and guardrail judge) with
+  `gen_ai.request.model`, `gen_ai.usage.input_tokens`,
+  `gen_ai.usage.output_tokens` and the finish reason. Prompts and
+  completions are never recorded; a test asserts it. Latency is the span
+  duration.
+- **Not done yet:** dashboards and a hosted trace backend.
 
 ## Setup
 
@@ -311,5 +315,6 @@ the judge via `GUARDRAILS_LLM_JUDGE=0` means it's never built either.
   the supervisor's inputs and outputs.
 - **Phase 4 (retrieval half done):** CI-gated retrieval evals (hit@k / MRR) are in.
   Answer-quality evals (Ragas/DeepEval) and real-model thresholds are not yet.
-- **Phase 5 (tracing half done):** OpenTelemetry spans for guardrails and
-  tool calls are in. LLM-call tracing (tokens, latency) and a trace backend are not yet.
+- **Phase 5 (done, minus a backend):** OpenTelemetry spans for guardrails, tool
+  calls and LLM requests (model, tokens, latency). A hosted trace backend
+  is not set up.

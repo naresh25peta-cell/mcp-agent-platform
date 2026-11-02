@@ -28,7 +28,7 @@ from mcp_agent_platform.supervisor.guardrails import (
     judge_output,
 )
 from mcp_agent_platform.supervisor.mcp_tools import load_all_tools
-from mcp_agent_platform.tracing import span
+from mcp_agent_platform.tracing import llm_trace_callbacks, span
 
 SYSTEM_PROMPT = (
     "You are a supervisor agent with two tools available: `search_documents` "
@@ -118,7 +118,10 @@ async def _ask_traced(question, model, judge_model) -> str:
         return f"I can't help with that request: {input_judge_verdict.reason}."
 
     agent = await build_supervisor(model)
-    result = await agent.ainvoke({"messages": [{"role": "user", "content": question}]})
+    result = await agent.ainvoke(
+        {"messages": [{"role": "user", "content": question}]},
+        config={"callbacks": llm_trace_callbacks()},
+    )
     answer = result["messages"][-1].content
 
     with span("guardrail.output_rules") as s:

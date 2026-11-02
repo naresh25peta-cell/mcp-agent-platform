@@ -65,3 +65,73 @@ def setup_tracing(exporter: Any | None = None):
     provider.add_span_processor(SimpleSpanProcessor(exporter))
     trace.set_tracer_provider(provider)
     return provider
+
+
+# ---------------------------------------------------------------------------
+# LLM-call tracing (LangChain callback)
+# ---------------------------------------------------------------------------
+
+
+def _make_callback_class():
+    from langchain_core.callbacks import BaseCallbackHandler
+
+    class LLMTraceCallback(BaseCallbackHandler):
+        """One ``chat <model>`` span per LLM request, recording the model
+        name, token usage and finish reason (GenAI conventions:
+        ``gen_ai.request.model``, ``gen_ai.usage.input_tokens``,
+        ``gen_ai.usage.output_tokens``).
+
+        Privacy: prompts and completions are never recorded.
+        """
+
+        def __init__(self) -> None:
+            self._spans: dict[Any, Any] = {}
+
+        def on_chat_model_start(self, serialized, messages, *, run_id, **kwargs):
+            invocation = kwargs.get("invocation_params") or {}
+            model = (
+                invocation.get("model")
+                or invocation.get("model_name")
+                or (serialized or {}).get("name")
+                or "unknown"
+            )
+            s = get_tracer().start_span(
+                f"chat {model}",
+                attributes={
+                    "gen_ai.operation.name": "chat",
+                    "gen_ai.request.model": str(model),
+                    "gen_ai.request.message_count": sum(len(m) for m in messages),
+                },
+            )
+            self._spans[run_id] = s
+
+        def on_llm_end(self, response, *, run_id, **kwargs):
+            s = self._spans.pop(run_id, None)
+            if s is None:
+                return
+            try:
+                msg = response.generations[0][0].message
+                usage = getattr(msg, "usage_metadata", None) or {}
+                if "input_tokens" in usage:
+                    s.set_attribute("gen_ai.usage.input_tokens", int(usage["input_tokens"]))
+                if "output_tokens" in usage:
+                    s.set_attribute("gen_ai.usage.output_tokens", int(usage["output_tokens"]))
+                finish = (getattr(msg, "response_metadata", None) or {}).get("finish_reason")
+                if finish:
+                    s.set_attribute("gen_ai.response.finish_reasons", [str(finish)])
+            except (IndexError, AttributeError):
+                pass
+            s.end()
+
+        def on_llm_error(self, error, *, run_id, **kwargs):
+            s = self._spans.pop(run_id, None)
+            if s is not None:
+                s.set_attribute("error.type", type(error).__name__)
+                s.end()
+
+    return LLMTraceCallback
+
+
+def llm_trace_callbacks() -> list:
+    """Callbacks to pass as ``config={"callbacks": llm_trace_callbacks()}``."""
+    return [_make_callback_class()()]
