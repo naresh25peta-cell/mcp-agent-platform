@@ -64,3 +64,62 @@ async def test_blocked_question_emits_ask_and_guardrail_spans_without_text(expor
 def test_setup_tracing_is_off_by_default(monkeypatch):
     monkeypatch.delenv("MCP_TRACE", raising=False)
     assert tracing.setup_tracing() is None
+
+
+# ---------------------------------------------------------------------------
+# LLM-call spans (callback handler)
+# ---------------------------------------------------------------------------
+
+
+async def test_llm_call_span_has_model_and_token_usage_but_no_text(exporter):
+    from langchain_core.messages import AIMessage, HumanMessage
+    from langchain_core.language_models.chat_models import BaseChatModel
+    from langchain_core.outputs import ChatGeneration, ChatResult
+
+    class UsageModel(BaseChatModel):
+        def _generate(self, messages, stop=None, run_manager=None, **kwargs):
+            msg = AIMessage(
+                content="secret answer text",
+                usage_metadata={"input_tokens": 12, "output_tokens": 5, "total_tokens": 17},
+                response_metadata={"finish_reason": "stop"},
+            )
+            return ChatResult(generations=[ChatGeneration(message=msg)])
+
+        @property
+        def _llm_type(self):
+            return "usage-fake"
+
+    prompt = "secret question text"
+    await UsageModel().ainvoke(
+        [HumanMessage(content=prompt)],
+        config={"callbacks": tracing.llm_trace_callbacks()},
+    )
+    (s,) = exporter.get_finished_spans()
+    assert s.name.startswith("chat ")
+    assert s.attributes["gen_ai.operation.name"] == "chat"
+    assert s.attributes["gen_ai.usage.input_tokens"] == 12
+    assert s.attributes["gen_ai.usage.output_tokens"] == 5
+    assert list(s.attributes["gen_ai.response.finish_reasons"]) == ["stop"]
+    blob = " ".join(str(v) for v in s.attributes.values())
+    assert prompt not in blob and "secret answer text" not in blob
+
+
+async def test_llm_error_ends_span_with_error_type(exporter):
+    from langchain_core.messages import HumanMessage
+    from langchain_core.language_models.chat_models import BaseChatModel
+
+    class Boom(BaseChatModel):
+        def _generate(self, *a, **k):
+            raise RuntimeError("provider down")
+
+        @property
+        def _llm_type(self):
+            return "boom"
+
+    with pytest.raises(RuntimeError):
+        await Boom().ainvoke(
+            [HumanMessage(content="hi")],
+            config={"callbacks": tracing.llm_trace_callbacks()},
+        )
+    (s,) = exporter.get_finished_spans()
+    assert s.attributes["error.type"] == "RuntimeError"
